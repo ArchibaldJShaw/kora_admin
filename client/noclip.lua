@@ -1,9 +1,18 @@
 -- Admin noclip -- freezes ped physics (so gravity/collision stop fighting
 -- manual movement) and translates the ped (or its vehicle) each frame along the
--- direction the player is already looking (GetGameplayCamRot), so mouse-look
--- keeps working for free without taking over the render camera. Native movement
--- controls are blocked while it runs so only Config.noclip.adMode decides what
--- A and D do.
+-- direction the player is looking. Native movement controls are blocked while
+-- it runs so only Config.noclip.adMode decides what A and D do.
+--
+-- Yaw is owned here, not read back from the gameplay camera: horizontal mouse
+-- look (control 1) is blocked and applied to `yaw`, the mover is turned to it
+-- and the follow camera is pinned straight behind (relative heading 0) every
+-- frame. Reading the camera's heading and writing it to the ped fed back into
+-- the follow camera, which swings round on its own when the ped moves towards
+-- it -- holding S made the view shake or snap to a random side (kora_admin#21).
+-- Pitch is owned the same way: vertical look (control 2) is blocked and applied
+-- to `pitch`, which the camera is pinned to and which steers W/S. Reading the
+-- follow camera's own pitch made W dive and S climb, because it idles tilted
+-- slightly down, and left the mouse unable to look up or down.
 
 local active = false
 
@@ -12,6 +21,9 @@ local active = false
 local ped = Kora.cache.ped()
 local vehicle = Kora.cache.vehicle()
 local frozenVehicle = false -- the vehicle currently held by this noclip session
+local yaw = 0.0 -- heading in degrees the mover faces and the camera sits behind
+local pitch = 0.0 -- view pitch in degrees (positive = looking up), clamped to maxPitch
+local maxPitch = 89.0
 
 local function toRadians(deg) return deg * math.pi / 180.0 end
 
@@ -19,6 +31,7 @@ local function toRadians(deg) return deg * math.pi / 180.0 end
 -- A/D (34/35, axis 30) through is what made the character yaw on the spot and
 -- drag the follow camera round while noclip also tried to strafe.
 local blockedControls = {
+    1, 2,                   -- horizontal/vertical look: applied to `yaw`/`pitch` instead
     30, 31, 32, 33, 34, 35, -- on-foot move axes and W/A/S/D
     21, 22, 36,             -- sprint, jump, stealth (Shift/Space/Ctrl are noclip speed + height)
     59, 60, 63, 64,         -- vehicle steer axes and A/D
@@ -47,7 +60,6 @@ local function tick()
 
     -- In a vehicle the car is what moves; the occupant is carried with it.
     local mover = vehicle or ped
-    local rot = GetGameplayCamRot(2)
     local coords = GetEntityCoords(mover)
 
     local speed = Config.noclip.baseSpeed
@@ -57,11 +69,20 @@ local function tick()
         speed = speed * Config.noclip.slowMultiplier
     end
 
-    local headingRad, pitchRad = toRadians(rot.z), toRadians(rot.x)
+    local left, right = IsDisabledControlPressed(0, 34), IsDisabledControlPressed(0, 35)
+
+    -- Mouse/right-stick right is a positive normal; GTA headings grow to the left.
+    yaw = yaw - GetDisabledControlNormal(0, 1) * (Config.noclip.lookSpeed or 8.0)
+    if adMode() == 'turn' then
+        yaw = yaw + (Config.noclip.turnSpeed or 2.0) * ((left and 1.0 or 0.0) - (right and 1.0 or 0.0))
+    end
+    yaw = yaw % 360.0
+    -- Mouse/right-stick down is a positive normal; looking up raises the pitch.
+    pitch = math.max(-maxPitch, math.min(maxPitch, pitch - GetDisabledControlNormal(0, 2) * (Config.noclip.lookSpeed or 8.0)))
+
+    local headingRad, pitchRad = toRadians(yaw), toRadians(pitch)
     local forwardX, forwardY, forwardZ = -math.sin(headingRad) * math.cos(pitchRad), math.cos(headingRad) * math.cos(pitchRad), math.sin(pitchRad)
     local rightX, rightY = math.cos(headingRad), math.sin(headingRad)
-
-    local left, right = IsDisabledControlPressed(0, 34), IsDisabledControlPressed(0, 35)
 
     local dx, dy, dz = 0.0, 0.0, 0.0
     if IsDisabledControlPressed(0, 32) then dx, dy, dz = dx + forwardX, dy + forwardY, dz + forwardZ end -- W
@@ -69,9 +90,6 @@ local function tick()
     if adMode() == 'strafe' then
         if left then dx, dy = dx - rightX, dy - rightY end  -- A
         if right then dx, dy = dx + rightX, dy + rightY end -- D
-    else
-        local turn = (Config.noclip.turnSpeed or 2.0) * ((left and 1.0 or 0.0) - (right and 1.0 or 0.0))
-        if turn ~= 0.0 then SetGameplayCamRelativeHeading(turn) end
     end
     if IsDisabledControlPressed(0, 22) then dz = dz + 1.0 end -- space = up
     if IsDisabledControlPressed(0, 36) then dz = dz - 1.0 end -- ctrl = down
@@ -80,7 +98,9 @@ local function tick()
     if mag > 0.0 then
         SetEntityCoordsNoOffset(mover, coords.x + (dx / mag) * speed, coords.y + (dy / mag) * speed, coords.z + (dz / mag) * speed, false, false, false)
     end
-    SetEntityHeading(mover, rot.z)
+    SetEntityHeading(mover, yaw)
+    SetGameplayCamRelativeHeading(0.0)
+    SetGameplayCamRelativePitch(pitch, 1.0)
 end
 
 local function enable()
@@ -89,6 +109,9 @@ local function enable()
     ped = Kora.cache.ped()
     vehicle = Kora.cache.vehicle()
     holdVehicle(vehicle)
+    local camRot = GetGameplayCamRot(2)
+    yaw = camRot.z -- start facing wherever the camera already looks
+    pitch = 0.0    -- and level, so W/S start out horizontal
     FreezeEntityPosition(ped, true)
     SetEntityCollision(ped, false, false)
     SetEntityInvincible(ped, true)
