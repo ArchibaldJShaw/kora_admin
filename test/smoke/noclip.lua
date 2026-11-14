@@ -23,7 +23,7 @@ dofile('config.lua')
 -- `opts.camDrift(frame)` returns how far the follow camera swings by itself.
 local function run(opts)
     local held, disabled, setCoords, camHeading, entityHeading = {}, {}, nil, nil, nil
-    local relativeResets, camZ, frame = 0, opts.heading, 0
+    local relativeResets, camZ, frame, camPitch = 0, opts.heading, 0, nil
     for _, key in ipairs(opts.keys) do held[key] = true end
     local handler, thread, cacheHandlers = nil, nil, {}
 
@@ -50,9 +50,13 @@ local function run(opts)
     -- The follow camera sits behind the ped's heading plus any self-drift.
     GetGameplayCamRot = function()
         local drift = opts.camDrift and opts.camDrift(frame) or 0.0
-        return { x = 0.0, y = 0.0, z = camZ + drift }
+        return { x = opts.camPitch or 0.0, y = 0.0, z = camZ + drift }
     end
-    GetDisabledControlNormal = function(_, key) return (opts.look and key == 1) and opts.look or 0.0 end
+    GetDisabledControlNormal = function(_, key)
+        if key == 1 then return opts.look or 0.0 end
+        if key == 2 then return opts.lookUD or 0.0 end
+        return 0.0
+    end
     GetEntityCoords = function() return { x = 0.0, y = 0.0, z = 0.0 } end
     IsControlPressed = function(_, key) return held[key] == true end
     IsDisabledControlPressed = IsControlPressed
@@ -62,13 +66,14 @@ local function run(opts)
     SetGameplayCamRelativeHeading = function(delta)
         if delta == 0.0 then relativeResets = relativeResets + 1 else camHeading = (camHeading or 0) + delta end
     end
+    SetGameplayCamRelativePitch = function(p) camPitch = p end
     DoesEntityExist = function() return true end
     FreezeEntityPosition, SetEntityCollision, SetEntityInvincible, SetEntityVisible = function() end, function() end, function() end, function() end
 
     dofile('client/noclip.lua')
     handler() -- enable
     thread()  -- one frame, then Wait toggles it off
-    return { coords = setCoords, camHeading = camHeading, disabled = disabled, heading = entityHeading, relativeResets = relativeResets }
+    return { coords = setCoords, camHeading = camHeading, disabled = disabled, heading = entityHeading, camPitch = camPitch, relativeResets = relativeResets }
 end
 
 local function near(a, b) return math.abs(a - b) < 1e-6 end
@@ -110,6 +115,29 @@ test('holding S is unaffected by the follow camera swinging on its own (#21)', f
     equal(near(r.heading, 0.0), true, 'heading holds steady without look input')
     equal(near(r.coords.x, 0.0), true, 'S moves straight back, no sideways drift')
     equal(near(r.coords.y, -Config.noclip.baseSpeed), true, 'S moves straight back')
+end)
+
+test('W and S move level when the view is level, whatever pitch the follow camera idles at (#22)', function()
+    local r = run({ mode = 'strafe', heading = 0.0, keys = { 32 }, camPitch = -8.0 })
+    equal(near(r.coords.z, 0.0), true, 'W must not descend')
+    equal(near(r.coords.y, Config.noclip.baseSpeed), true, 'W moves straight ahead')
+    r = run({ mode = 'strafe', heading = 0.0, keys = { 33 }, camPitch = -8.0 })
+    equal(near(r.coords.z, 0.0), true, 'S must not climb')
+    equal(near(r.coords.y, -Config.noclip.baseSpeed), true, 'S moves straight back')
+end)
+
+test('mouse up/down pitches the view, pins the camera and steers W', function()
+    local r = run({ mode = 'strafe', heading = 0.0, keys = { 32 }, lookUD = -5.0 })
+    equal(r.disabled[2], true, 'native vertical look is blocked')
+    equal(near(r.camPitch, 40.0), true, 'mouse up raises the pitch (clamped normal * lookSpeed)')
+    equal(r.coords.z > 0.0, true, 'W while looking up rises')
+    r = run({ mode = 'strafe', heading = 0.0, keys = { 32 }, lookUD = 5.0 })
+    equal(r.coords.z < 0.0, true, 'W while looking down descends')
+end)
+
+test('pitch is clamped so the view cannot flip over', function()
+    local r = run({ mode = 'strafe', heading = 0.0, keys = {}, lookUD = -100.0 })
+    equal(near(r.camPitch, 89.0), true, 'pitch clamps at 89 degrees')
 end)
 
 test('native move and steer controls are blocked so the game cannot turn the ped', function()

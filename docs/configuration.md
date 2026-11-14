@@ -102,6 +102,7 @@ See [Discord administration](./features/discord.md).
 | `Config.noclip.fastMultiplier` | number | `3.0` | Multiplier while Shift is held. |
 | `Config.noclip.slowMultiplier` | number | `0.35` | Multiplier while Alt is held. |
 | `Config.noclip.adMode` | enum | `'strafe'` | `strafe` (A/D slide sideways) or `turn` (A/D yaw the view). Live. |
+| `Config.noclip.lookSpeed` | number | `8.0` | Degrees the view turns per unit of mouse or right-stick input, horizontally and vertically (1-30). Live. |
 | `Config.noclip.turnSpeed` | number | `2.0` | Degrees per frame in `turn` mode (0.1-10). Live. |
 
 ## World

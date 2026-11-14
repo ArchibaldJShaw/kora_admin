@@ -40,7 +40,7 @@ A fourth component is the destination heading, not a z offset. `/vec4` and `/coo
 
 ## Noclip
 
-`/noclip` (admin) toggles a free-fly mode on your own client. The ped (or the vehicle you are in) is frozen with collision off, made invincible and invisible, and moved every frame along the gameplay camera direction, so the mouse keeps looking around.
+`/noclip` (admin) toggles a free-fly mode on your own client. The ped (or the vehicle you are in) is frozen with collision off, made invincible and invisible, and moved every frame along the direction you are looking. Mouse (or right stick) left/right turns the view and up/down pitches it, so W flies level when you look at the horizon and rises or descends as you look up or down; `Config.noclip.lookSpeed` sets the sensitivity.
 
 | Key | Action |
 | --- | --- |

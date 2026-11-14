@@ -9,7 +9,10 @@
 -- frame. Reading the camera's heading and writing it to the ped fed back into
 -- the follow camera, which swings round on its own when the ped moves towards
 -- it -- holding S made the view shake or snap to a random side (kora_admin#21).
--- Vertical look is left to the game camera; its pitch still steers W/S.
+-- Pitch is owned the same way: vertical look (control 2) is blocked and applied
+-- to `pitch`, which the camera is pinned to and which steers W/S. Reading the
+-- follow camera's own pitch made W dive and S climb, because it idles tilted
+-- slightly down, and left the mouse unable to look up or down.
 
 local active = false
 
@@ -19,6 +22,8 @@ local ped = Kora.cache.ped()
 local vehicle = Kora.cache.vehicle()
 local frozenVehicle = false -- the vehicle currently held by this noclip session
 local yaw = 0.0 -- heading in degrees the mover faces and the camera sits behind
+local pitch = 0.0 -- view pitch in degrees (positive = looking up), clamped to maxPitch
+local maxPitch = 89.0
 
 local function toRadians(deg) return deg * math.pi / 180.0 end
 
@@ -26,7 +31,7 @@ local function toRadians(deg) return deg * math.pi / 180.0 end
 -- A/D (34/35, axis 30) through is what made the character yaw on the spot and
 -- drag the follow camera round while noclip also tried to strafe.
 local blockedControls = {
-    1,                      -- horizontal look: applied to `yaw` instead
+    1, 2,                   -- horizontal/vertical look: applied to `yaw`/`pitch` instead
     30, 31, 32, 33, 34, 35, -- on-foot move axes and W/A/S/D
     21, 22, 36,             -- sprint, jump, stealth (Shift/Space/Ctrl are noclip speed + height)
     59, 60, 63, 64,         -- vehicle steer axes and A/D
@@ -72,8 +77,10 @@ local function tick()
         yaw = yaw + (Config.noclip.turnSpeed or 2.0) * ((left and 1.0 or 0.0) - (right and 1.0 or 0.0))
     end
     yaw = yaw % 360.0
+    -- Mouse/right-stick down is a positive normal; looking up raises the pitch.
+    pitch = math.max(-maxPitch, math.min(maxPitch, pitch - GetDisabledControlNormal(0, 2) * (Config.noclip.lookSpeed or 8.0)))
 
-    local headingRad, pitchRad = toRadians(yaw), toRadians(GetGameplayCamRot(2).x)
+    local headingRad, pitchRad = toRadians(yaw), toRadians(pitch)
     local forwardX, forwardY, forwardZ = -math.sin(headingRad) * math.cos(pitchRad), math.cos(headingRad) * math.cos(pitchRad), math.sin(pitchRad)
     local rightX, rightY = math.cos(headingRad), math.sin(headingRad)
 
@@ -93,6 +100,7 @@ local function tick()
     end
     SetEntityHeading(mover, yaw)
     SetGameplayCamRelativeHeading(0.0)
+    SetGameplayCamRelativePitch(pitch, 1.0)
 end
 
 local function enable()
@@ -101,7 +109,9 @@ local function enable()
     ped = Kora.cache.ped()
     vehicle = Kora.cache.vehicle()
     holdVehicle(vehicle)
-    yaw = GetGameplayCamRot(2).z -- start facing wherever the camera already looks
+    local camRot = GetGameplayCamRot(2)
+    yaw = camRot.z -- start facing wherever the camera already looks
+    pitch = 0.0    -- and level, so W/S start out horizontal
     FreezeEntityPosition(ped, true)
     SetEntityCollision(ped, false, false)
     SetEntityInvincible(ped, true)
