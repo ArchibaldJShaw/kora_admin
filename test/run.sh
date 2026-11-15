@@ -20,5 +20,8 @@ done
 echo "== discord transport =="
 if ! ( cd "$dir/.." && node --test test/discord.test.js ); then status=1; fi
 
+echo "== no raw print =="
+if ! ( cd "$dir/.." && "$lua_bin" test/no_raw_print.lua ); then status=1; fi
+
 echo "-- ran $suites suite(s) --"
 exit "$status"

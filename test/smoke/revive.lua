@@ -9,11 +9,13 @@ local function equal(a, e, m) if a ~= e then error(('%s (expected %s, got %s)'):
 dofile('config.lua')
 
 local commands, responses, events, order = {}, {}, {}, {}
+local loggerCalls = {}
 local state, fullRevived, throwing, meta = 'started', {}, false, {}
 
 Kora = {
     commands = { add = function(name, _, _, _, handler) commands[name] = handler end },
     lang = function(key) return key end,
+    logging = { error = function(event, message, fields) loggerCalls[#loggerCalls + 1] = { event = event, message = message, fields = fields } end },
 }
 function AddEventHandler() end
 function RegisterNetEvent() end
@@ -77,6 +79,9 @@ test('a failing fullRevive export does not break the command', function()
     commands.revive(7, { '12' })
     equal(events[1], 'kora_admin:client:revive', 'client revive already sent')
     equal(responses[#responses].ok, true, 'still reports success')
+    equal(#loggerCalls, 1, 'failure logged once')
+    equal(loggerCalls[1].event, 'admin.ambulance_revive_failed', 'logger event')
+    equal(loggerCalls[1].fields.error ~= nil, true, 'fields carry the error')
 end)
 
 test('/heal fills hunger and thirst when Config.heal.restoreNeeds is on', function()

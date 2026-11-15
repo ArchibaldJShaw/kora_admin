@@ -26,7 +26,7 @@ Kora Admin is a command-driven admin menu: every action — in the NUI menu, in 
    ensure kora_clothing
    ```
 
-4. **Tables are created automatically** — On start, `server/schema.lua` defines `KoraAdminSchema` (`admin_logs`, `admin_reports`, plus report-message tables) and `server/migrate.lua` waits for `Kora.sql.ready(60000)` then calls `Kora.sql.ensureTables(KoraAdminSchema)`. It is additive only and prints `[kora_admin:schema] schema up to date.` once done. No SQL file has to be run by hand.
+4. **Tables are created automatically** — On start, `server/schema.lua` defines `KoraAdminSchema` (`admin_logs`, `admin_reports`, plus report-message tables) and `server/migrate.lua` waits for `Kora.sql.ready(60000)` then calls `Kora.sql.ensureTables(KoraAdminSchema)`. It is additive only and logs the `schema.up_to_date` event (via `Kora.logging`) once done. No SQL file has to be run by hand.
 
 5. **Ban enforcement needs the bans table** — `server/ban_enforcement.lua` hooks `playerConnecting` and checks the `bans` table for a matching, unexpired `license`, `discord` or `ip`. That table is created by kora_core’s own SQL migration, not by kora_admin — kora_core must be set up first.
 

@@ -1232,7 +1232,7 @@ local function openRoot(options)
             local pending = livePending
             livePending = {}
             local ok, refreshErr = pcall(refreshReportsLive, pending)
-            if not ok then print(('^1[kora_admin]^7 live report refresh failed: %s'):format(tostring(refreshErr))) end
+            if not ok then Kora.logging.error('menu.live_report_refresh_failed', 'Live report refresh failed', { error = tostring(refreshErr) }) end
         end
         liveRefreshing = false
     end

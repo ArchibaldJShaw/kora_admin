@@ -170,7 +170,7 @@ local function scheduleRestart(context, reason, confirmed)
                 if ok then return end
                 -- SQL may yield; keep it outside the JavaScript callback stack.
                 CreateThread(function()
-                    print(('^1[kora_admin:discord]^7 txAdmin restart failed: %s'):format(tostring(message)))
+                    Kora.logging.error('discord.restart_failed', 'txAdmin restart failed', { error = tostring(message) })
                     Admin.log(0, 'discord.restart.failed', nil, { discord_id = context.userId, error = tostring(message) })
                     Kora.notify.sendToAll({ title = Kora.lang('title.restart_unconfirmed'), message = Kora.lang('error.restart_unconfirmed'), type = 'error' })
                 end)
@@ -253,7 +253,7 @@ function Admin.handleDiscordInteraction(interaction)
     end, debug.traceback)
     Admin.commandContexts[thread] = nil
     if not worked then
-        print(('^1[kora_admin:discord]^7 command failed: %s'):format(failure))
+        Kora.logging.error('discord.command_failed', 'Discord command failed', { error = tostring(failure) })
         return { ok = false, message = Kora.lang('error.discord_command_failed') }
     end
     return { ok = context.ok, message = table.concat(context.messages, '\n') }
@@ -306,12 +306,17 @@ local function configureDiscord()
     local application, guild = Config.discord.applicationId, guildId()
     if not application:match('^%d+$') or not guild:match('^%d+$') or not Config.discord.publicKey:match('^%x+$')
         or #Config.discord.publicKey ~= 64 then
-        return print('^1[kora_admin:discord]^7 Configure the application ID, server ID and public key in appshell before enabling Discord.')
+        Kora.logging.error('discord.config_invalid', 'Configure the application ID, server ID and public key in appshell before enabling Discord')
+        return
     end
     -- Upsert our one command; never replace another integration's commands.
     Kora.discord.botRequest('POST', '/applications/' .. application .. '/guilds/' .. guild .. '/commands', registrationPayload(), function(ok)
         if generation ~= registrationGeneration then return end
-        print(ok and '^2[kora_admin:discord]^7 /kora_admin registered.' or '^1[kora_admin:discord]^7 Could not register /kora_admin; check the bot token and guild access.')
+        if ok then
+            Kora.logging.info('discord.command_registered', '/kora_admin registered')
+        else
+            Kora.logging.error('discord.command_registration_failed', 'Could not register /kora_admin; check the bot token and guild access')
+        end
     end)
     Kora.discord.syncRoles()
 end

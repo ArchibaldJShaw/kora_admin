@@ -72,7 +72,7 @@ async function restartTxAdmin({ url, username, password }, request = requestJson
     return 'txAdmin accepted the server restart';
 }
 
-function createHttpHandler({ settings, dispatch, request = requestJson, now = Date.now, report = console.error }) {
+function createHttpHandler({ settings, dispatch, request = requestJson, now = Date.now, report = (event, message, fields) => globalThis.KoraLogger?.error(event, message, fields) }) {
     const seen = new Map();
     return (req, res) => {
         let responded = false;
@@ -121,8 +121,8 @@ function createHttpHandler({ settings, dispatch, request = requestJson, now = Da
                             method: 'PATCH',
                             headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
                         });
-                        if (!response.ok) report(`Discord response failed (HTTP ${response.status}) for request ${interaction.id}`);
-                    } catch { report(`Discord response could not be delivered for request ${interaction.id}`); }
+                        if (!response.ok) report('discord.response_failed', 'Discord response failed', { status: response.status });
+                    } catch { report('discord.response_undelivered', 'Discord response could not be delivered'); }
                 };
                 const timeout = setTimeout(() => void reply({ ok: false,
                     message: 'The command has not returned. Check the audit log before retrying.' }), 120000);
@@ -146,7 +146,6 @@ if (typeof GetCurrentResourceName === 'function') {
     SetHttpHandler(createHttpHandler({
         settings: () => JSON.parse(global.exports[resource].discordSettings()),
         dispatch: (body, callback) => global.exports[resource].discordDispatch(body, callback),
-        report: message => console.error(`[kora_admin:discord] ${message}`),
     }));
     const restartConfig = () => ({
         url: GetConvar('kora_admin_txadmin_url', 'http://127.0.0.1:40120'),

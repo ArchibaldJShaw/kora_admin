@@ -70,7 +70,7 @@ CreateThread(function()
         Wait(2000)
         if levelAnswered then return end
     end
-    print('^1[kora_admin]^7 the server never answered the permission-level request; menu items will stay filtered to "user". Every command still re-checks server-side.')
+    Kora.logging.error('core.permission_level_timeout', 'The server never answered the permission-level request; menu items stay filtered to "user" (commands still re-check server-side)')
 end)
 
 -- Re-request on the client's own player-loaded signal, so a (re)connect

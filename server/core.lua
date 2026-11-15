@@ -58,7 +58,7 @@ end
 function Admin.fullReviveAmbulance(target)
     if GetResourceState('kora_ambulance') ~= 'started' then return false end
     local ok, err = pcall(function() return exports.kora_ambulance:fullRevive(target) end)
-    if not ok then print(('[kora_admin] kora_ambulance fullRevive failed for %s: %s'):format(tostring(target), tostring(err))) end
+    if not ok then Kora.logging.error('admin.ambulance_revive_failed', 'kora_ambulance fullRevive failed', { targetId = tonumber(target), error = tostring(err) }) end
     return ok
 end
 
