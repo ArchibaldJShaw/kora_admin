@@ -5,7 +5,7 @@ sidebar_position: 10
 
 # Database
 
-kora_admin declares its tables in `server/schema.lua` and creates or updates them on start (`server/migrate.lua`) with kora_sql's `Kora.sql.ensureTables`, after waiting up to 60 seconds for kora_sql. Schema warnings are printed with the `[kora_admin:schema]` prefix. No manual import is needed. All tables use `utf8mb4_unicode_ci`.
+kora_admin declares its tables in `server/schema.lua` and creates or updates them on start (`server/migrate.lua`) with kora_sql's `Kora.sql.ensureTables`, after waiting up to 60 seconds for kora_sql. Schema warnings are logged through `Kora.logging` as `schema.table_warning`. No manual import is needed. All tables use `utf8mb4_unicode_ci`.
 
 ## admin_logs
 

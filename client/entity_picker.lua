@@ -220,7 +220,7 @@ local function startPicker()
                 if not state.menuOpen then updateHud(snapshot) end
             end)
             if not ok then
-                print(('[kora_admin] entity picker raycast failed: %s'):format(tostring(err)))
+                Kora.logging.error('entity_picker.raycast_failed', 'Entity picker raycast failed', { error = tostring(err) })
                 Wait(1000)
             end
             Wait(0)

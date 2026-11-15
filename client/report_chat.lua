@@ -198,7 +198,7 @@ RegisterNetEvent('kora_admin:client:myReportChanged', function(id, info)
     info = type(info) == 'table' and info or {}
     if Kora.nui.isAppOpen and Kora.nui.isAppOpen(MY_APP) then
         local ok, err = pcall(refreshOpen)
-        if not ok then refreshing = false print(('^1[kora_admin]^7 my reports refresh failed: %s'):format(tostring(err))) end
+        if not ok then refreshing = false Kora.logging.error('reports.my_reports_refresh_failed', 'My reports refresh failed', { error = tostring(err) }) end
         return
     end
     if info.kind == 'reply' then

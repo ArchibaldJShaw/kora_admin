@@ -3,19 +3,21 @@
 CreateThread(function()
     local ok = Kora.sql.ready(60000)
     if not ok then
-        print('^1[kora_admin:schema]^7 kora_sql never became ready -- admin logs and reports unavailable.')
+        Kora.logging.error('schema.sql_not_ready', 'kora_sql never became ready; admin logs and reports unavailable')
         return
     end
 
     local reports, err = Kora.sql.ensureTables(KoraAdminSchema)
     if err then
-        print(('^1[kora_admin:schema]^7 schema failed: %s'):format(tostring(err)))
+        Kora.logging.error('schema.setup_failed', 'Schema setup failed', { error = tostring(err) })
         return
     end
     for _, report in ipairs(reports or {}) do
         for _, warning in ipairs(report.warnings or {}) do
-            print(('^3[kora_admin:schema]^7 %s: %s'):format(tostring(report.table), tostring(warning)))
+            Kora.logging.warn('schema.table_warning', 'Schema reported a table warning', {
+                table = tostring(report.table), warning = tostring(warning),
+            })
         end
     end
-    print('^2[kora_admin:schema]^7 schema up to date.')
+    Kora.logging.info('schema.up_to_date', 'Schema up to date')
 end)

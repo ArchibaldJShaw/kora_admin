@@ -64,6 +64,7 @@ server_scripts {
     'server/commands/privileged.lua',
     'server/commands/self.lua',
     'server/discord.lua',
+    '@kora_lib/modules/logging/adapters/server.js',
     'server/discord.js'
 }
 
@@ -71,6 +72,7 @@ server_scripts {
 -- table); menu.lua last since it references everything above.
 client_scripts {
     'client/core.lua',
+    '@kora_lib/modules/logging/nui.lua',
     'client/medal.lua',
     'client/development.lua',
     'client/entity_picker.lua',

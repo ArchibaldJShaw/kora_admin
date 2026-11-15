@@ -8,7 +8,7 @@ async function reportResult(result) {
             body: JSON.stringify(result),
         });
     } catch (error) {
-        console.error('Could not return the Medal result to kora_admin', error);
+        globalThis.KoraLogger?.error('medal.result_return_failed', 'Could not return the Medal result to kora_admin', { error: String(error) });
     }
 }
 

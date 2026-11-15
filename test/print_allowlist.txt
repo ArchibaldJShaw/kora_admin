@@ -1,0 +1,2 @@
+server/permissions.lua:kora_admin_whyperms is an operator console report (explicit console output, usable when permissions are broken)
+client/relay.lua:copyCoords deliberately prints coordinates to F8 as the command's output, not a diagnostic
